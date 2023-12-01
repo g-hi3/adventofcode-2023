@@ -1,2 +1,7 @@
-# adventofcode-2023
-Advent of Code 2023 solutions
+# Advent of Code 2023
+
+In this repository, I will record my solutions for the Advent of Code 2023.
+
+Challenges:
+
+* [Day 1: Trebuchet?!](./Source/Day-1)
