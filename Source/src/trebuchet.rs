@@ -1,35 +1,28 @@
 pub fn extract_calibration_value(line: &str) -> u32 {
-    let first_digit = line.get_first();
-    let last_digit = line.get_last();
+    let first_digit = get_first_digit(line);
+    let last_digit = get_last_digit(line);
 
     last_digit + first_digit * 10
 }
 
-trait DigitsLine {
-    fn get_first(&self) -> u32;
-    fn get_last(&self) -> u32;
+fn get_first_digit(line: &str) -> u32 {
+    DIGITS
+        .iter()
+        .map(|digit| DigitPos::in_str(line, digit))
+        .filter_map(|digit_pos| digit_pos)
+        .min_by(DigitPos::compare_by_position)
+        .map(|digit_pos| digit_pos.digit.value)
+        .unwrap_or(0)
 }
 
-impl<'a> DigitsLine for &str {
-    fn get_first(&self) -> u32 {
-        DIGITS
-            .iter()
-            .map(|digit| DigitPos::in_str(self, digit))
-            .filter_map(|digit_pos| digit_pos)
-            .min_by(DigitPos::compare_by_position)
-            .map(|digit_pos| digit_pos.digit.value)
-            .unwrap_or(0)
-    }
-
-    fn get_last(&self) -> u32 {
-        DIGITS
-            .iter()
-            .map(|digit| DigitPos::r_in_str(self, digit))
-            .filter_map(|digit_pos| digit_pos)
-            .max_by(DigitPos::compare_by_position)
-            .map(|digit_pos| digit_pos.digit.value)
-            .unwrap_or(0)
-    }
+fn get_last_digit(line: &str) -> u32 {
+    DIGITS
+        .iter()
+        .map(|digit| DigitPos::r_in_str(line, digit))
+        .filter_map(|digit_pos| digit_pos)
+        .max_by(DigitPos::compare_by_position)
+        .map(|digit_pos| digit_pos.digit.value)
+        .unwrap_or(0)
 }
 
 const DIGITS: [Digit; 18] = [
