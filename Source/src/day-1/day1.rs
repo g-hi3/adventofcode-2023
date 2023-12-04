@@ -84,6 +84,6 @@ fn main() {
             Err(error) => eprintln!("Can't read input file {}: {error}", file_path.display()),
         }
     } else {
-        eprintln!("Invalid format! Run day-1 like this:\n\n\tday-1 <file path>");
+        eprintln!("Invalid format! Run day-1 like this:\n\n\tday1 <file path>");
     }
 }
