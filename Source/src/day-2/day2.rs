@@ -81,10 +81,10 @@ fn main() {
                             Ok(game) => Some(game),
                             Err(_) => None
                         })
-                        .filter(|game| game.is_allowed_by_constraint(constraints))
-                        .map(|game| game.id)
+                        .map(|game| game.get_minimum_required_set())
+                        .map(|cubes_set| cubes_set.power())
                         .sum::<u32>();
-                    println!("Sum of valid game ids: {game_id_sum}")
+                    println!("Sum of minimum required sets' powers: {game_id_sum}")
                 }
                 Err(error) => eprintln!("Can't read input file {}: {error}", file_path.display())
             }

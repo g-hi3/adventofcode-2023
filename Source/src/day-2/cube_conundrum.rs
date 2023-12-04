@@ -1,3 +1,6 @@
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cubes<'a> {
     kind: &'a str,
@@ -40,6 +43,10 @@ impl CubesSet<'_> {
             .collect::<Vec<Cubes>>();
         CubesSet { cubes }
     }
+
+    pub fn power(self: &Self) -> u32 {
+        self.cubes.iter().fold(1_u32, |prod, cube| prod * cube.count)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -48,7 +55,7 @@ pub struct Game<'a> {
     sets: Vec<CubesSet<'a>>
 }
 
-impl Game<'_> {
+impl<'a, 'b> Game<'a> where 'a: 'b {
     pub fn from_line(line: &str) -> Result<Game, String> {
         if !line.starts_with("Game ") {
             return Err(String::from("Game line must start with 'Game <id>:'!"));
@@ -79,6 +86,33 @@ impl Game<'_> {
             .iter()
             .flat_map(|set| &set.cubes)
             .any(|cubes| cubes.kind == constraint.kind && cubes.count > constraint.max_count))
+    }
+
+    pub fn get_minimum_required_set(self: &Self) -> CubesSet<'b> {
+        let mut min_required = HashMap::<&str, u32>::new();
+        for cubes in self.sets.iter().flat_map(|set| &set.cubes) {
+            let entry = min_required.entry(cubes.kind);
+            match entry {
+                Entry::Occupied(mut occupied) => {
+                    if *occupied.get() < cubes.count {
+                        occupied.insert(cubes.count);
+                    }
+                }
+                Entry::Vacant(vacant) => {
+                    vacant.insert(cubes.count);
+                }
+            }
+        }
+
+        let cubes = min_required
+            .iter()
+            .map(|(&kind, &count)| {
+                let kind = kind.clone();
+                let count = count.clone();
+                Cubes { kind, count }
+            })
+            .collect::<Vec<Cubes>>();
+        CubesSet { cubes }
     }
 }
 
@@ -197,5 +231,20 @@ mod tests {
             MaxBallsConstraint::new("red", 2),
             MaxBallsConstraint::new("green", 13),
             MaxBallsConstraint::new("blue", 14)]));
+    }
+
+    #[test]
+    fn test_get_minimum_required_set() {
+        let game = Game::from_line("Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green")
+            .expect("Game::from_line() should've created a valid Game!");
+        assert!(game.get_minimum_required_set().cubes.iter().any(|cube| cube.kind == "blue" && cube.count == 6));
+        assert!(game.get_minimum_required_set().cubes.iter().any(|cube| cube.kind == "green" && cube.count == 2));
+        assert!(game.get_minimum_required_set().cubes.iter().any(|cube| cube.kind == "red" && cube.count == 4));
+    }
+
+    #[test]
+    fn test_cubes_set_power() {
+        let cubes_set = CubesSet::from_str("8 green, 6 blue, 20 red");
+        assert_eq!(cubes_set.power(), 8 * 6 * 20);
     }
 }
