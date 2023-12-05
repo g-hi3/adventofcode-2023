@@ -68,10 +68,6 @@ fn main() {
             }
 
             let file_content = fs::read_to_string(&file_path);
-            let constraints = &vec![
-                MaxBallsConstraint::new("red", 12),
-                MaxBallsConstraint::new("green", 13),
-                MaxBallsConstraint::new("blue", 14)];
             match file_content {
                 Ok(file_content) => {
                     let game_id_sum = file_content
