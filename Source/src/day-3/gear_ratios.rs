@@ -1,5 +1,5 @@
 #[derive(Debug, Eq, PartialEq)]
-struct Coords (u32, u32);
+pub struct Coords (u32, u32);
 
 impl Coords {
     fn left(self: &Self) -> u32 {
@@ -43,26 +43,26 @@ impl SchematicPart {
     pub fn extract(schematic: &str) -> Vec<SchematicPart> {
         let mut schematic_parts = Vec::<SchematicPart>::new();
         for (y, line) in schematic.lines().enumerate() {
-            let mut number_value = 0_u32;
-            let mut number_x = 0_usize;
+            let mut number_value = 0;
+            let mut number_x = 0;
 
             for (x, char) in line.chars().enumerate() {
-                if let Some(digit) = char.to_digit(10_u32) {
+                if let Some(digit) = char.to_digit(10) {
                     if number_value == 0 {
                         number_x = x;
                     }
 
-                    number_value = number_value * 10_u32 + digit;
+                    number_value = number_value * 10 + digit;
                     continue;
                 }
 
-                if number_value > 0_u32 {
+                if number_value > 0 {
                     schematic_parts.push(SchematicPart::Number {
                         value: number_value,
                         position: Coords(number_x as u32, y as u32)
                     });
-                    number_value = 0_u32;
-                    number_x = 0_usize;
+                    number_value = 0;
+                    number_x = 0;
                 }
 
                 if char != '.' {
@@ -71,6 +71,13 @@ impl SchematicPart {
                         position: Coords (x as u32, y as u32)
                     });
                 }
+            }
+
+            if number_value > 0 {
+                schematic_parts.push(SchematicPart::Number {
+                    value: number_value,
+                    position: Coords(number_x as u32, y as u32)
+                });
             }
         }
 
@@ -120,7 +127,7 @@ fn get_order_of_magnitude(number: u32) -> u32 {
     let mut remainder = number;
     let mut order_of_magnitude = 0;
 
-    while remainder > 10 {
+    while remainder >= 10 {
         remainder /= 10;
         order_of_magnitude += 1;
     }
@@ -326,5 +333,41 @@ mod tests {
             .iter()
             .sum::<u32>();
         assert_eq!(sum_of_part_numbers, 1);
+
+        let schematic = ".....
+...42
+..../";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 42);
+
+        let schematic = ".....
+42...
+/....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 42);
+
+        let schematic = ".....
+/....
+42...";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 42);
+
+        let schematic = ".....
+../..
+10...";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 10);
     }
 }
