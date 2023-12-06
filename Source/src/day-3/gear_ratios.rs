@@ -86,17 +86,18 @@ impl SchematicPart {
 }
 
 pub trait GetPartNumbers {
-    fn get_part_numbers(self: Self) -> Vec<u32>;
+    fn get_part_numbers(self: &Self) -> Vec<u32>;
+    fn get_gear_values(self: &Self) -> Vec<u32>;
 }
 
 impl GetPartNumbers for Vec<SchematicPart> {
-    fn get_part_numbers(self: Self) -> Vec<u32> {
+    fn get_part_numbers(self: &Self) -> Vec<u32> {
         let mut part_numbers = Vec::<u32>::new();
 
-        'outer: for part in &self {
+        'outer: for part in self {
             match part {
                 SchematicPart::Number { value: number_value, position: number_position } => {
-                    for other_part in &self {
+                    for other_part in self {
                         match other_part {
                             SchematicPart::Number { .. } => continue,
                             SchematicPart::Symbol { position: symbol_position, .. } => {
@@ -113,6 +114,45 @@ impl GetPartNumbers for Vec<SchematicPart> {
         }
 
         part_numbers
+    }
+
+    fn get_gear_values(self: &Self) -> Vec<u32> {
+        let mut gear_values = Vec::<u32>::new();
+
+        'outer: for part in self {
+            match part {
+                SchematicPart::Symbol { kind, position: symbol_position } => {
+                    if *kind != '*' {
+                        continue;
+                    }
+
+                    let mut adjacent_numbers = Vec::<u32>::new();
+                    for other_part in self {
+                        match other_part {
+                            SchematicPart::Symbol { .. } => continue,
+                            SchematicPart::Number { value: number_value, position: number_position} => {
+                                if is_adjacent(number_position, symbol_position, get_order_of_magnitude(*number_value)) {
+                                    adjacent_numbers.push(*number_value);
+                                }
+
+                                if adjacent_numbers.len() > 2 {
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                    }
+
+                    if adjacent_numbers.len() == 2 {
+                        let number_one = adjacent_numbers.get(0).unwrap_or(&0);
+                        let number_two = adjacent_numbers.get(1).unwrap_or(&0);
+                        gear_values.push(number_one * number_two);
+                    }
+                }
+                SchematicPart::Number { .. } => continue
+            }
+        }
+
+        gear_values
     }
 }
 
@@ -369,5 +409,21 @@ mod tests {
             .iter()
             .sum::<u32>();
         assert_eq!(sum_of_part_numbers, 10);
+    }
+
+    #[test]
+    fn test_part_two() {
+        let schematic = "467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..";
+        let gear_values = SchematicPart::extract(schematic).get_gear_values().iter().sum::<u32>();
+        assert_eq!(gear_values, 467_835);
     }
 }

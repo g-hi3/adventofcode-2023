@@ -22,7 +22,11 @@ fn main() {
 
             let file_content = fs::read_to_string(&file_path);
             match file_content {
-                Ok(file_content) => println!("Sum of part numbers is {}", SchematicPart::extract(&file_content).get_part_numbers().iter().sum::<u32>()),
+                Ok(file_content) => {
+                    let parts = SchematicPart::extract(&file_content);
+                    println!("Sum of part numbers is {}", parts.get_part_numbers().iter().sum::<u32>());
+                    println!("Sum of gear values is {}", parts.get_gear_values().iter().sum::<u32>());
+                },
                 Err(error) => eprintln!("Can't read file {}!\n{error}", file_path.display())
             }
         }
