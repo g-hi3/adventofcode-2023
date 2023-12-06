@@ -86,19 +86,16 @@ impl GetPartNumbers for Vec<SchematicPart> {
     fn get_part_numbers(self: Self) -> Vec<u32> {
         let mut part_numbers = Vec::<u32>::new();
 
-        for part in &self {
+        'outer: for part in &self {
             match part {
                 SchematicPart::Number { value: number_value, position: number_position } => {
                     for other_part in &self {
-                        if part == other_part {
-                            continue;
-                        }
-
                         match other_part {
                             SchematicPart::Number { .. } => continue,
                             SchematicPart::Symbol { position: symbol_position, .. } => {
                                 if is_adjacent(number_position, symbol_position, get_order_of_magnitude(*number_value)) {
                                     part_numbers.push(*number_value);
+                                    continue 'outer;
                                 }
                             }
                         }
@@ -196,5 +193,138 @@ mod tests {
             .iter()
             .sum::<u32>();
         assert_eq!(sum_of_part_numbers, 4361);
+
+        let schematic = "467..114..
++..*......";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 467);
+
+        let schematic = "467..114..
+....*.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 114);
+
+        let schematic = "*....
+.475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".*...
+.475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = "..*..
+.475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = "...*.
+.475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = "....*
+.475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+*475.
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475*
+.....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475.
+*....";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475.
+.*...";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475.
+..*..";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475.
+...*.";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+.475.
+....*";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 475);
+
+        let schematic = ".....
+...1.
+..../";
+        let sum_of_part_numbers = SchematicPart::extract(schematic)
+            .get_part_numbers()
+            .iter()
+            .sum::<u32>();
+        assert_eq!(sum_of_part_numbers, 1);
     }
 }
