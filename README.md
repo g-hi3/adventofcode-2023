@@ -6,4 +6,5 @@ Challenges:
 
 * [Day 1: Trebuchet?!](./Source/src/day-1/trebuchet.rs)
 * [Day 2: Cube Conundrum](./Source/src/day-2/cube_conundrum.rs)
-* [Day 1: Gear Ratios](./Source/src/day-3/gear_ratios.rs)
+* [Day 3: Gear Ratios](./Source/src/day-3/gear_ratios.rs)
+* [Day 4: Scratchcards](./Source/src/day-4/scratchcards.rs)
