@@ -19,4 +19,9 @@ path = "src/day-3/day3.rs"
 name = "day4"
 path = "src/day-4/day4.rs"
 
+[[bin]]
+name = "day5"
+path = "src/day-5/day5.rs"
+
 [dependencies]
+rayon = { version = "1.8.0", features = [] }
