@@ -31,5 +31,9 @@ path = "src/day-6/day6.rs"
 name = "day7"
 path = "src/day-7/day7.rs"
 
+[[bin]]
+name = "day8"
+path = "src/day-8/day8.rs"
+
 [dependencies]
 rayon = { version = "1.8.0", features = [] }
