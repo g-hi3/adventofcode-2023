@@ -2,14 +2,14 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use crate::camel_cards::Strength::{FiveOfAKind, FourOfAKind, FullHouse, HighCard, Pair, ThreeOfAKind, TwoPairs};
 
-#[derive(Debug, PartialEq, Eq, Ord)]
-struct Play {
+#[derive(Debug)]
+pub struct Play {
     hand: Hand,
     bid: u32
 }
 
 impl Play {
-    fn extract(str: &str) -> Vec<Self> {
+    pub fn extract(str: &str) -> Vec<Self> {
         str
             .lines()
             .filter_map(Self::new)
@@ -22,16 +22,73 @@ impl Play {
         let bid = parts.next()?.parse::<u32>().ok()?;
         Some(Self { hand, bid })
     }
+
+    pub fn bid(&self) -> u32 {
+        self.bid
+    }
+
+    pub fn hand(&self) -> String {
+        self.hand.cards.iter().map(|card| match card {
+            Card::A => 'A',
+            Card::K => 'K',
+            Card::Q => 'Q',
+            Card::J => 'J',
+            Card::T => 'T',
+            Card::Number(n) => char::from_digit(*n, 10).unwrap(),
+        }).collect::<String>()
+    }
 }
 
-impl PartialOrd for Play {
+impl PartialEq<Self> for Play {
+    fn eq(&self, other: &Self) -> bool {
+        self.bid == other.bid
+            && self.hand == other.hand
+    }
+}
+
+impl PartialOrd<Self> for Play {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.hand.cmp(&other.hand))
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Ord)]
-struct Hand {
+impl Eq for Play {
+}
+
+impl Ord for Play {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.hand > other.hand {
+            Ordering::Greater
+        } else if self.hand == other.hand {
+            Ordering::Equal
+        } else {
+            Ordering::Less
+        }
+    }
+
+    fn max(self, other: Self) -> Self where Self: Sized {
+        match self.cmp(&other) {
+            Ordering::Less => other,
+            Ordering::Equal => self,
+            Ordering::Greater => self
+        }
+    }
+
+    fn min(self, other: Self) -> Self where Self: Sized {
+        match self.cmp(&other) {
+            Ordering::Less => self,
+            Ordering::Equal => self,
+            Ordering::Greater => other
+        }
+    }
+
+    fn clamp(self, min: Self, max: Self) -> Self where Self: Sized, Self: PartialOrd {
+        self.min(max).max(min)
+    }
+}
+
+#[derive(Debug)]
+pub struct Hand {
     cards: Vec<Card>
 }
 
@@ -63,32 +120,35 @@ impl Hand {
         let mut cards = cards.iter();
 
         if cards.len() == 1 {
-            let high_card = *cards.next()?.0;
-            return Some(FiveOfAKind(high_card));
+            return Some(FiveOfAKind);
         } else if cards.len() == 2 {
             let (first_card, first_count) = cards.next()?;
             let (second_card, second_count) = cards.next()?;
 
             if *first_count == 4 && *second_count == 1 {
-                return Some(FourOfAKind {
-                    four: **first_card,
-                    one: **second_card
-                });
+                return if **first_card == Card::J || **second_card == Card::J {
+                    Some(FiveOfAKind)
+                } else {
+                    Some(FourOfAKind)
+                }
             } else if *first_count == 1 && *second_count == 4 {
-                return Some(FourOfAKind {
-                    four: **second_card,
-                    one: **first_card
-                });
+                return if **first_card == Card::J || **second_card == Card::J {
+                    Some(FiveOfAKind)
+                } else {
+                    Some(FourOfAKind)
+                }
             } else if *first_count == 3 && *second_count == 2 {
-                return Some(FullHouse {
-                    three: **first_card,
-                    two: **second_card
-                });
+                return if **first_card == Card::J || **second_card == Card::J {
+                    Some(FiveOfAKind)
+                } else {
+                    Some(FullHouse)
+                }
             } else if *first_count == 2 && *second_count == 3 {
-                return Some(FullHouse {
-                    three: **second_card,
-                    two: **first_card
-                });
+                return if **first_card == Card::J || **second_card == Card::J {
+                    Some(FiveOfAKind)
+                } else {
+                    Some(FullHouse)
+                }
             }
         } else if cards.len() == 3 {
             let (first_card, first_count) = cards.next()?;
@@ -96,47 +156,47 @@ impl Hand {
             let (third_card, third_count) = cards.next()?;
 
             if *first_count == 3 && *second_count == 1 && *third_count == 1 {
-                let (fourth, fifth) = Self::get_remaining_two(second_card, third_card);
-                return Some(ThreeOfAKind {
-                    three: **first_card,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J {
+                    Some(FourOfAKind)
+                } else {
+                    Some(ThreeOfAKind)
+                }
             } else if *first_count == 1 && *second_count == 3 && *third_count == 1 {
-                let (fourth, fifth) = Self::get_remaining_two(first_card, third_card);
-                return Some(ThreeOfAKind {
-                    three: **second_card,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J {
+                    Some(FourOfAKind)
+                } else {
+                    Some(ThreeOfAKind)
+                }
             } else if *first_count == 1 && *second_count == 1 && *third_count == 3 {
-                let (fourth, fifth) = Self::get_remaining_two(first_card, second_card);
-                return Some(ThreeOfAKind {
-                    three: **third_card,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J {
+                    Some(FourOfAKind)
+                } else {
+                    Some(ThreeOfAKind)
+                }
             } else if *first_count == 2 && *second_count == 2 && *third_count == 1 {
-                let (pair1, pair2) = Self::get_remaining_two_pairs(first_card, second_card);
-                return Some(TwoPairs {
-                    pair1,
-                    pair2,
-                    fifth: **third_card
-                });
+                return if **first_card == Card::J || **second_card == Card::J {
+                    Some(FourOfAKind)
+                } else if **third_card == Card::J {
+                    Some(FullHouse)
+                } else {
+                    Some(TwoPairs)
+                }
             } else if *first_count == 2 && *second_count == 1 && *third_count == 2 {
-                let (pair1, pair2) = Self::get_remaining_two_pairs(first_card, third_card);
-                return Some(TwoPairs {
-                    pair1,
-                    pair2,
-                    fifth: **second_card
-                });
+                return if **first_card == Card::J || **third_card == Card::J {
+                    Some(FourOfAKind)
+                } else if **second_card == Card::J {
+                    Some(FullHouse)
+                } else {
+                    Some(TwoPairs)
+                }
             } else if *first_count == 1 && *second_count == 2 && *third_count == 2 {
-                let (pair1, pair2) = Self::get_remaining_two_pairs(second_card, third_card);
-                return Some(TwoPairs {
-                    pair1,
-                    pair2,
-                    fifth: **first_card
-                });
+                return if **third_card == Card::J || **second_card == Card::J {
+                    Some(FourOfAKind)
+                } else if **first_card == Card::J {
+                    Some(FullHouse)
+                } else {
+                    Some(TwoPairs)
+                }
             }
         } else if cards.len() == 4 {
             let (first_card, first_count) = cards.next()?;
@@ -145,37 +205,29 @@ impl Hand {
             let (fourth_card, fourth_count) = cards.next()?;
 
             if *first_count == 2 && *second_count == 1 && *third_count == 1 && *fourth_count == 1 {
-                let (third, fourth, fifth) = Self::get_remaining_three(second_card, third_card, fourth_card);
-                return Some(Pair {
-                    two: **first_card,
-                    third,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J || **fourth_card == Card::J {
+                    Some(ThreeOfAKind)
+                } else {
+                    Some(Pair)
+                }
             } else if *first_count == 1 && *second_count == 2 && *third_count == 1 && *fourth_count == 1 {
-                let (third, fourth, fifth) = Self::get_remaining_three(first_card, third_card, fourth_card);
-                return Some(Pair {
-                    two: **second_card,
-                    third,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J || **fourth_card == Card::J {
+                    Some(ThreeOfAKind)
+                } else {
+                    Some(Pair)
+                }
             } else if *first_count == 1 && *second_count == 1 && *third_count == 2 && *fourth_count == 1 {
-                let (third, fourth, fifth) = Self::get_remaining_three(first_card, second_card, fourth_card);
-                return Some(Pair {
-                    two: **third_card,
-                    third,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J || **fourth_card == Card::J {
+                    Some(ThreeOfAKind)
+                } else {
+                    Some(Pair)
+                }
             } else if *first_count == 1 && *second_count == 1 && *third_count == 1 && *fourth_count == 2 {
-                let (third, fourth, fifth) = Self::get_remaining_three(first_card, second_card, third_card);
-                return Some(Pair {
-                    two: **fourth_card,
-                    third,
-                    fourth,
-                    fifth
-                });
+                return if **first_card == Card::J || **second_card == Card::J || **third_card == Card::J || **fourth_card == Card::J {
+                    Some(ThreeOfAKind)
+                } else {
+                    Some(Pair)
+                }
             }
         } else if cards.len() == 5 {
             let (first_card, _) = cards.next()?;
@@ -183,18 +235,16 @@ impl Hand {
             let (third_card, _) = cards.next()?;
             let (fourth_card, _) = cards.next()?;
             let (fifth_card, _) = cards.next()?;
-            let mut cards = vec![first_card, second_card, third_card, fourth_card, fifth_card];
-            cards.sort();
-            cards.reverse();
-            let mut cards = cards.iter();
 
-            return Some(HighCard {
-                high: ***cards.next()?,
-                second: ***cards.next()?,
-                third: ***cards.next()?,
-                fourth: ***cards.next()?,
-                fifth: ***cards.next()?,
-            });
+            return if **first_card == Card::J
+                || **second_card == Card::J
+                || **third_card == Card::J
+                || **fourth_card == Card::J
+                || **fifth_card == Card::J {
+                Some(Pair)
+            } else {
+                Some(HighCard)
+            }
         }
 
         None
@@ -233,202 +283,150 @@ impl Hand {
     }
 }
 
-impl PartialOrd for Hand {
+impl PartialEq<Self> for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        self.strength() == other.strength()
+    }
+}
+
+impl PartialOrd<Self> for Hand {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.strength() {
             None => None,
             Some(strength) => match other.strength() {
                 None => None,
-                Some(other_strength) => Some(strength.cmp(&other_strength))
+                Some(other_strength) => {
+                    match strength.cmp(&other_strength) {
+                        Ordering::Less => Some(Ordering::Less),
+                        Ordering::Greater => Some(Ordering::Greater),
+                        Ordering::Equal => {
+                            for i in 0..5 {
+                                if self.cards[i] > other.cards[i] {
+                                    return Some(Ordering::Greater);
+                                } else if self.cards[i] < other.cards[i] {
+                                    return Some(Ordering::Less);
+                                }
+                            }
+
+                            Some(Ordering::Equal)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Ord)]
+impl Eq for Hand {
+}
+
+impl Ord for Hand {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(&other).unwrap()
+    }
+}
+
+#[derive(Debug)]
 enum Strength {
-    FiveOfAKind(Card),
-    FourOfAKind { four: Card, one: Card },
-    FullHouse { three: Card, two: Card },
-    ThreeOfAKind { three: Card, fourth: Card, fifth: Card },
-    TwoPairs { pair1: Card, pair2: Card, fifth: Card },
-    Pair { two: Card, third: Card, fourth: Card, fifth: Card },
-    HighCard { high: Card, second: Card, third: Card, fourth: Card, fifth: Card }
+    FiveOfAKind,
+    FourOfAKind,
+    FullHouse,
+    ThreeOfAKind,
+    TwoPairs,
+    Pair,
+    HighCard
 }
 
-impl Strength {
-    fn from(hand: &Hand) -> Option<Strength> {
-        let mut card_map = HashMap::<Card, u32>::new();
-
-        for card in &hand.cards {
-            let value = card_map.entry(*card).or_insert(0);
-            *value += 1;
-        }
-
-        let mut cards = card_map.iter().collect::<Vec<(&Card, &u32)>>().clone();
-        cards.sort_by(|left, right| match left.1.cmp(right.1) {
-            Ordering::Less => Ordering::Less,
-            Ordering::Equal => left.0.cmp(right.0),
-            Ordering::Greater => Ordering::Greater
-        });
-
-        for (card, count) in &card_map {
-            println!("{card:?} -> {count}");
-        }
-        println!();
-
-        if card_map.len() == 5 {
-            let mut cards = cards.iter();
-            Some(HighCard {
-                fifth: cards.next().map(|(&card, _)| card.clone())?,
-                fourth: cards.next().map(|(&card, _)| card.clone())?,
-                third: cards.next().map(|(&card, _)| card.clone())?,
-                second: cards.next().map(|(&card, _)| card.clone())?,
-                high: cards.next().map(|(&card, _)| card.clone())?
-            })
-        } else if card_map.len() == 4 {
-            let mut cards = cards.iter();
-            Some(Pair {
-                fifth: cards.next().map(|(&card, _)| card.clone())?,
-                fourth: cards.next().map(|(&card, _)| card.clone())?,
-                third: cards.next().map(|(&card, _)| card.clone())?,
-                two: cards.next().map(|(&card, _)| card.clone())?
-            })
-        } else if card_map.len() == 3 {
-            let mut cards = cards.iter();
-            let first = cards.next().map(|(&card, _)| card.clone())?;
-            let fourth = cards.next().map(|(&card, _)| card.clone())?;
-            let fifth = cards.next().map(|(&card, _)| card.clone())?;
-            if let Some((_, count)) = card_map.get_key_value(&fifth) {
-                if *count == 3 {
-                    Some(ThreeOfAKind {
-                        three: fifth,
-                        fourth,
-                        fifth: first
-                    })
-                } else {
-                    Some(TwoPairs {
-                        fifth: first,
-                        pair2: fifth,
-                        pair1: fourth
-                    })
-                }
-            } else {
-                None
+impl PartialEq<Self> for Strength {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            FiveOfAKind => match other {
+                FiveOfAKind => true,
+                _ => false
             }
-        } else if card_map.len() == 2 {
-            let mut cards = cards.iter();
-            let first = cards.next().map(|(&card, _)| card.clone())?;
-            let fifth = cards.next().map(|(&card, _)| card.clone())?;
-            if let Some((_, count)) = card_map.get_key_value(&first) {
-                if *count == 3 {
-                    Some(FullHouse {
-                        three: fifth,
-                        two: first
-                    })
-                } else {
-                    Some(FourOfAKind {
-                        one: first,
-                        four: fifth
-                    })
-                }
-            } else {
-                None
+            FourOfAKind => match other {
+                FourOfAKind => true,
+                _ => false
             }
-        } else if card_map.len() == 1 {
-            let mut cards = cards.iter();
-            Some(FiveOfAKind(cards.next().map(|(&card, _)| card.clone())?))
-        } else {
-            None
+            FullHouse => match other {
+                FullHouse => true,
+                _ => false
+            }
+            ThreeOfAKind => match other {
+                ThreeOfAKind => true,
+                _ => false
+            }
+            TwoPairs => match other {
+                TwoPairs => true,
+                _ => false
+            }
+            Pair => match other {
+                Pair => true,
+                _ => false
+            }
+            HighCard => match other {
+                HighCard => true,
+                _ => false
+            }
         }
     }
 }
 
-impl PartialOrd for Strength {
+impl PartialOrd<Self> for Strength {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self {
-            FiveOfAKind(card) => match other {
-                FiveOfAKind(other_card) => Some(card.cmp(other_card)),
+            FiveOfAKind => match other {
+                FiveOfAKind => Some(Ordering::Equal),
                 _ => Some(Ordering::Greater)
             }
-            FourOfAKind { four, one } => match other {
-                FiveOfAKind(_) => Some(Ordering::Less),
-                FourOfAKind { four: other_four, one: other_one } => match four.cmp(other_four) {
-                    Ordering::Equal => Some(one.cmp(other_one)),
-                    ordering => Some(ordering)
-                },
+            FourOfAKind => match other {
+                FiveOfAKind => Some(Ordering::Less),
+                FourOfAKind => Some(Ordering::Equal),
                 _ => Some(Ordering::Greater)
             }
-            FullHouse { three, two } => match other {
-                FiveOfAKind(_) => Some(Ordering::Less),
-                FourOfAKind { .. } => Some(Ordering::Less),
-                FullHouse { three: other_three, two: other_two } => match three.cmp(other_three) {
-                    Ordering::Equal => Some(two.cmp(other_two)),
-                    ordering => Some(ordering)
-                }
+            FullHouse => match other {
+                FiveOfAKind => Some(Ordering::Less),
+                FourOfAKind => Some(Ordering::Less),
+                FullHouse => Some(Ordering::Equal),
                 _ => Some(Ordering::Greater)
             }
-            ThreeOfAKind { three, fourth, fifth } => match other {
-                FiveOfAKind(_) => Some(Ordering::Less),
-                FourOfAKind { .. } => Some(Ordering::Less),
-                FullHouse { .. } => Some(Ordering::Less),
-                ThreeOfAKind { three: other_three, fourth: other_fourth, fifth: other_fifth } => match three.cmp(other_three) {
-                    Ordering::Equal => match fourth.cmp(other_fourth) {
-                        Ordering::Equal => Some(fifth.cmp(other_fifth)),
-                        ordering => Some(ordering)
-                    }
-                    ordering => Some(ordering)
-                }
-                _ => Some(Ordering::Greater),
+            ThreeOfAKind => match other {
+                FiveOfAKind => Some(Ordering::Less),
+                FourOfAKind => Some(Ordering::Less),
+                FullHouse => Some(Ordering::Less),
+                ThreeOfAKind => Some(Ordering::Equal),
+                _ => Some(Ordering::Greater)
             }
-            TwoPairs { pair1, pair2, fifth } => match other {
-                TwoPairs { pair1: other_pair1, pair2: other_pair2, fifth: other_fifth } => match pair1.cmp(other_pair1) {
-                    Ordering::Equal => match pair2.cmp(other_pair2) {
-                        Ordering::Equal => Some(fifth.cmp(other_fifth)),
-                        ordering => Some(ordering)
-                    }
-                    ordering => Some(ordering)
-                }
-                Pair { .. } => Some(Ordering::Greater),
-                HighCard { .. } => Some(Ordering::Greater),
-                _ => Some(Ordering::Less),
-            }
-            Pair { two, third, fourth, fifth } => match other {
-                Pair { two: other_two, third: other_third, fourth: other_fourth, fifth: other_fifth } => match two.cmp(other_two) {
-                    Ordering::Equal => match third.cmp(other_third) {
-                        Ordering::Equal => match fourth.cmp(other_fourth) {
-                            Ordering::Equal => Some(fifth.cmp(other_fifth)),
-                            ordering => Some(ordering)
-                        }
-                        ordering => Some(ordering)
-                    }
-                    ordering => Some(ordering)
-                }
-                HighCard { .. } => Some(Ordering::Greater),
+            TwoPairs => match other {
+                TwoPairs => Some(Ordering::Equal),
+                Pair => Some(Ordering::Greater),
+                HighCard => Some(Ordering::Greater),
                 _ => Some(Ordering::Less)
             }
-            HighCard { high, second, third, fourth, fifth } => match other {
-                HighCard { high: other_high, second: other_second, third: other_third, fourth: other_fourth, fifth: other_fifth } => match high.cmp(other_high) {
-                    Ordering::Equal => match second.cmp(other_second) {
-                        Ordering::Equal => match third.cmp(other_third) {
-                            Ordering::Equal => match fourth.cmp(other_fourth) {
-                                Ordering::Equal => Some(fifth.cmp(other_fifth)),
-                                ordering => Some(ordering)
-                            }
-                            ordering => Some(ordering)
-                        }
-                        ordering => Some(ordering)
-                    }
-                    ordering => Some(ordering)
-                },
+            Pair => match other {
+                Pair => Some(Ordering::Equal),
+                HighCard => Some(Ordering::Greater),
+                _ => Some(Ordering::Less)
+            }
+            HighCard => match other {
+                HighCard => Some(Ordering::Equal),
                 _ => Some(Ordering::Less)
             }
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, Hash)]
-enum Card {
+impl Eq for Strength {
+}
+
+impl Ord for Strength {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(&other).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, Copy, Hash)]
+pub enum Card {
     A, K, Q, J, T, Number(u32)
 }
 
@@ -446,7 +444,38 @@ impl Card {
     }
 }
 
-impl PartialOrd for Card {
+impl PartialEq<Self> for Card {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Card::A => match other {
+                Card::A => true,
+                _ => false
+            }
+            Card::K => match other {
+                Card::K => true,
+                _ => false
+            },
+            Card::Q => match other {
+                Card::Q => true,
+                _ => false
+            },
+            Card::J => match other {
+                Card::J => true,
+                _ => false
+            },
+            Card::T => match other {
+                Card::T => true,
+                _ => false
+            },
+            Card::Number(n) => match other {
+                Card::Number(x) => n == x,
+                _ => false
+            }
+        }
+    }
+}
+
+impl PartialOrd<Self> for Card {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(match self {
             Card::A => match other {
@@ -466,20 +495,29 @@ impl PartialOrd for Card {
             }
             Card::J => match other {
                 Card::J => Ordering::Equal,
-                Card::T => Ordering::Greater,
-                Card::Number(_) => Ordering::Greater,
                 _ => Ordering::Less
             }
             Card::T => match other {
                 Card::T => Ordering::Equal,
                 Card::Number(_) => Ordering::Greater,
+                Card::J => Ordering::Greater,
                 _ => Ordering::Less
             }
             Card::Number(number) => match other {
-                Card::Number(other) => number.cmp(other),
+                Card::Number(other_number) => number.cmp(other_number),
+                Card::J => Ordering::Greater,
                 _ => Ordering::Less
             }
         })
+    }
+}
+
+impl Eq for Card {
+}
+
+impl Ord for Card {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -487,7 +525,7 @@ impl PartialOrd for Card {
 mod tests {
     use std::cmp::Ordering;
     use crate::camel_cards::{Card, Hand, Play, Strength};
-    use crate::camel_cards::Strength::{FiveOfAKind, FourOfAKind, FullHouse, HighCard, Pair, TwoPairs};
+    use crate::camel_cards::Strength::{FiveOfAKind, FourOfAKind, FullHouse, HighCard, Pair, ThreeOfAKind, TwoPairs};
 
     #[test]
     fn test_new_card() {
@@ -616,75 +654,27 @@ QQQJA 483");
     }
 
     #[test]
-    fn test_strength_from_hand() {
-        let hand = Hand::new("KKKKK");
-        assert_eq!(Strength::from(&hand), Some(Strength::FiveOfAKind(Card::K)));
-        let hand = Hand::new("KKQKK");
-        assert_eq!(Strength::from(&hand), Some(Strength::FourOfAKind { four: Card::K, one: Card::Q }));
-        let hand = Hand::new("QKQQQ");
-        assert_eq!(Strength::from(&hand), Some(Strength::FourOfAKind { four: Card::Q, one: Card::K }));
-        let hand = Hand::new("QQKJK");
-        assert_eq!(Strength::from(&hand), Some(Strength::TwoPairs { pair1: Card::K, pair2: Card::Q, fifth: Card::J }));
-        let hand = Hand::new("93993");
-        assert_eq!(Strength::from(&hand), Some(Strength::FullHouse { three: Card::Number(9), two: Card::Number(3) }));
-        let hand = Hand::new("93393");
-        assert_eq!(Strength::from(&hand), Some(Strength::FullHouse { three: Card::Number(3), two: Card::Number(9) }));
-    }
-
-    #[test]
     fn test_strength() {
         let hand = Hand::new("KKKKK");
-        assert_eq!(hand.strength(), Some(FiveOfAKind(Card::K)));
+        assert_eq!(hand.strength(), Some(FiveOfAKind));
         let hand = Hand::new("99999");
-        assert_eq!(hand.strength(), Some(FiveOfAKind(Card::Number(9))));
+        assert_eq!(hand.strength(), Some(FiveOfAKind));
         let hand = Hand::new("99599");
-        assert_eq!(hand.strength(), Some(FourOfAKind{
-            four: Card::Number(9),
-            one: Card::Number(5)
-        }));
+        assert_eq!(hand.strength(), Some(FourOfAKind));
         let hand = Hand::new("KQQQQ");
-        assert_eq!(hand.strength(), Some(FourOfAKind{
-            four: Card::Q,
-            one: Card::K
-        }));
+        assert_eq!(hand.strength(), Some(FourOfAKind));
         let hand = Hand::new("333KK");
-        assert_eq!(hand.strength(), Some(FullHouse {
-            three: Card::Number(3),
-            two: Card::K
-        }));
+        assert_eq!(hand.strength(), Some(FullHouse));
         let hand = Hand::new("Q3Q3Q");
-        assert_eq!(hand.strength(), Some(FullHouse {
-            three: Card::Q,
-            two: Card::Number(3)
-        }));
+        assert_eq!(hand.strength(), Some(FullHouse));
         let hand = Hand::new("4J46J");
-        assert_eq!(hand.strength(), Some(TwoPairs {
-            pair1: Card::J,
-            pair2: Card::Number(4),
-            fifth: Card::Number(6)
-        }));
+        assert_eq!(hand.strength(), Some(FourOfAKind));
         let hand = Hand::new("37583");
-        assert_eq!(hand.strength(), Some(Pair {
-            two: Card::Number(3),
-            third: Card::Number(8),
-            fourth: Card::Number(7),
-            fifth: Card::Number(5)
-        }));
+        assert_eq!(hand.strength(), Some(Pair));
         let hand = Hand::new("TJJQK");
-        assert_eq!(hand.strength(), Some(Pair {
-            two: Card::J,
-            third: Card::K,
-            fourth: Card::Q,
-            fifth: Card::T
-        }));
+        assert_eq!(hand.strength(), Some(ThreeOfAKind));
         let hand = Hand::new("4ATJ3");
-        assert_eq!(hand.strength(), Some(HighCard {
-            high: Card::A,
-            second: Card::J,
-            third: Card::T,
-            fourth: Card::Number(4),
-            fifth: Card::Number(3)
-        }));
+        assert_eq!(hand.strength(), Some(Pair));
     }
 
     #[test]
@@ -700,34 +690,26 @@ QQQJA 483");
         plays.sort();
         assert_eq!(plays, vec![
             &Hand::new("32T3K"),
-            &Hand::new("KTJJT"),
             &Hand::new("KK677"),
             &Hand::new("T55J5"),
             &Hand::new("QQQJA"),
+            &Hand::new("KTJJT")
         ]);
     }
 
     #[test]
     fn test_day7() {
-        let strength1 = Strength::ThreeOfAKind {
-            three: Card::Q,
-            fourth: Card::A,
-            fifth: Card::J
-        };
-        let strength2 = Strength::Pair {
-            two: Card::Number(3),
-            third: Card::K,
-            fourth: Card::T,
-            fifth: Card::Number(2)
-        };
-        assert_eq!(strength1.cmp(&strength2), Ordering::Less);
+        let strength1 = Strength::ThreeOfAKind;
+        let strength2 = Strength::Pair;
+        assert_eq!(strength1.cmp(&strength2), Ordering::Greater);
 
-        let plays = Play::extract("QQQJA 483");
+        let plays = Play::extract("KK677 28");
         let play1 = plays.get(0).unwrap();
-        let plays = Play::extract("32T3K 765");
+        let plays = Play::extract("QQQJA 483");
         let play2 = plays.get(0).unwrap();
         let strength1 = play1.hand.strength().unwrap();
         let strength2 = play2.hand.strength().unwrap();
+        println!("{:?} < {:?}", strength1, strength2);
         assert_eq!(strength1.cmp(&strength2), Ordering::Less);
 
         let mut plays = Play::extract("32T3K 765
@@ -737,18 +719,21 @@ KTJJT 220
 QQQJA 483");
         plays.sort();
         assert_eq!(plays, vec![
-            Play { bid: 483, hand: Hand::new("QQQJA") },
-            Play { bid: 684, hand: Hand::new("T55J5") },
+            Play { bid: 765, hand: Hand::new("32T3K") },
             Play { bid: 28, hand: Hand::new("KK677") },
-            Play { bid: 220, hand: Hand::new("KTJJT") },
-            Play { bid: 765, hand: Hand::new("32T3K") }
+            Play { bid: 684, hand: Hand::new("T55J5") },
+            Play { bid: 483, hand: Hand::new("QQQJA") },
+            Play { bid: 220, hand: Hand::new("KTJJT") }
         ]);
 
         let ranks = plays
             .iter()
             .enumerate()
-            .map(|(index, play)| play.bid as u64 * (index as u64 + 1))
+            .map(|(index, play)| {
+                println!("{} * ({index} + 1) = {}", play.bid, play.bid as u64 * (index as u64 + 1));
+                play.bid as u64 * (index as u64 + 1)
+            })
             .sum::<u64>();
-        assert_eq!(ranks, 6440);
+        assert_eq!(ranks, 5905);
     }
 }
