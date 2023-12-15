@@ -11,5 +11,7 @@ fn main() {
     let file_content = fs::read_to_string(file_path).unwrap();
     let historical_data = History::extract(&file_content);
     let oasis_report_sum = historical_data.iter().map(|history| history.predict()).sum::<i64>();
-    println!("OASIS report sum is {oasis_report_sum}");
+    println!("OASIS r-report sum is {oasis_report_sum}");
+    let oasis_report_sum = historical_data.iter().map(|history| history.lpredict()).sum::<i64>();
+    println!("OASIS l-report sum is {oasis_report_sum}");
 }

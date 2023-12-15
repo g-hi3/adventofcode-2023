@@ -54,6 +54,17 @@ impl History {
         }
     }
 
+    pub fn lpredict(&self) -> i64 {
+        if self.is_final_sequence() {
+            0
+        } else {
+            let subsequence = self.subsequence();
+            let predicted_value = subsequence.lpredict();
+            let first_value = self.values.first().unwrap();
+            first_value - predicted_value
+        }
+    }
+
     fn extrapolate(&self) -> Self {
         let predicted_value = self.predict();
         let mut values = self.values.clone();
@@ -133,6 +144,18 @@ mod tests {
         assert_eq!(history.predict(), 3);
         let history = History::new("0 0 0 0").unwrap();
         assert_eq!(history.predict(), 0);
+    }
+
+    #[test]
+    fn test_history_lpredict() {
+        let history = History::new("0 3 6 9 12 15").unwrap();
+        assert_eq!(history.lpredict(), -3);
+        let history = History::new("3 3 3 3 3").unwrap();
+        assert_eq!(history.lpredict(), 3);
+        let history = History::new("0 0 0 0").unwrap();
+        assert_eq!(history.lpredict(), 0);
+        let history = History::new("10  13  16  21  30  45").unwrap();
+        assert_eq!(history.lpredict(), 5);
     }
 
     #[test]
