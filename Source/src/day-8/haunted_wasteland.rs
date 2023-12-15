@@ -20,14 +20,13 @@ impl Network {
         Some(Network { instructions, nodes })
     }
 
-    pub fn run_instructions(&self, first_node: &str, last_node: &str) -> Option<Path<'_>> {
+    pub fn run_instructions(&self, first_node: &str) -> Option<Path<'_>> {
         let mut nodes = Vec::<&Node>::new();
         let first_node = self.nodes.get(first_node)?;
-        let last_node = self.nodes.get(last_node)?;
         let mut node = first_node;
         let mut instructions = self.instructions.iter();
         let mut instruction = instructions.next()?;
-        while node != last_node {
+        while !node.name.ends_with("Z") {
             nodes.push(node);
             node = self.navigate(&node, &instruction)?;
             instruction = match instructions.next() {
@@ -51,6 +50,15 @@ impl Network {
 
         self.nodes.get(to)
     }
+
+    pub fn starting_nodes(&self) -> Vec<&Node> {
+        self.nodes
+            .iter()
+            .filter_map(|(key, value)|
+                if key.ends_with("A") { Some(value) }
+                else { None })
+            .collect::<Vec<&Node>>()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -65,7 +73,7 @@ impl Path<'_> {
 }
 
 #[derive(Debug, PartialEq)]
-struct Node {
+pub struct Node {
     name: String,
     left: String,
     right: String
@@ -97,6 +105,10 @@ impl Node {
             .to_string();
 
         Some(Self { name, left, right })
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
     }
 }
 
@@ -213,12 +225,12 @@ DDD = (DDD, DDD)
 EEE = (EEE, EEE)
 GGG = (GGG, GGG)
 ZZZ = (ZZZ, ZZZ)").unwrap();
-        let path = network.run_instructions("AAA", "ZZZ");
+        let path = network.run_instructions("AAA");
         assert_eq!(path, Some(Path {
             nodes: vec![
                 network.nodes.get("AAA").unwrap(),
                 network.nodes.get("CCC").unwrap(),
-                network.nodes.get("ZZZ").unwrap(),
+                network.nodes.get("ZZZ").unwrap()
             ]
         }));
         assert_eq!(path.unwrap().len(), 2);
@@ -228,7 +240,7 @@ ZZZ = (ZZZ, ZZZ)").unwrap();
 AAA = (BBB, BBB)
 BBB = (AAA, ZZZ)
 ZZZ = (ZZZ, ZZZ)").unwrap();
-        let path = network.run_instructions("AAA", "ZZZ").unwrap();
+        let path = network.run_instructions("AAA").unwrap();
         assert_eq!(path.len(), 6);
 
         let network = Network::new("LLR
@@ -236,9 +248,9 @@ ZZZ = (ZZZ, ZZZ)").unwrap();
 AAA = (BBB, BBB)
 BBB = (AAA, ZZZ)
 ZZZ = (ZZZ, ZZZ)").unwrap();
-        let path = network.run_instructions("AAA", "BBB").unwrap();
+        let path = network.run_instructions("AAA").unwrap();
         assert_eq!(path.len(), 1);
-        let path = network.run_instructions("BBB", "AAA").unwrap();
+        let path = network.run_instructions("BBB").unwrap();
         assert_eq!(path.len(), 1);
     }
 
