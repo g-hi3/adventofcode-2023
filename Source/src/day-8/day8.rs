@@ -1,5 +1,5 @@
 use std::{env, fs, path};
-use crate::haunted_wasteland::{Network, Path};
+use haunted_wasteland::Network;
 
 mod haunted_wasteland;
 

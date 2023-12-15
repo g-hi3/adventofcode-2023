@@ -11,3 +11,5 @@ Challenges:
 * [Day 5: If You Give A Seed A Fertilizer](./Source/src/day-5/seed_fertilizer.rs)
 * [Day 6: Wait For It](./Source/src/day-6/wait_for_it.rs)
 * [Day 7: Camel Cards](./Source/src/day-7/camel_cards.rs)
+* [Day 8: Camel Cards](./Source/src/day-8/camel_cards.rs)
+* [Day 9: Mirage Maintenance](./Source/src/day-9/mirage_maintenance.rs)
