@@ -1,10 +1,22 @@
 #[derive(Debug, PartialEq, Clone)]
-struct Coords {
+pub struct Coords {
     x: usize,
     y: usize
 }
 
 impl Coords {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+
+    pub fn x(&self) -> usize {
+        self.x
+    }
+
+    pub fn y(&self) -> usize {
+        self.y
+    }
+
     fn right(&self) -> Option<Self> {
         if self.x == usize::MAX {
             None
@@ -78,6 +90,10 @@ impl Maze {
         Self { tiles: grid, starting_position }
     }
 
+    pub fn tiles(&self) -> &Vec<Vec<Tile>> {
+        &self.tiles
+    }
+
     fn get_tile_at(&self, coords: &Coords) -> Option<&Tile> {
         self.tiles
             .get(coords.y)?
@@ -88,6 +104,119 @@ impl Maze {
         match &self.starting_position {
             Some(starting_position) => Some(&starting_position),
             None => None
+        }
+    }
+
+    pub fn find_loop(&self) -> Option<Vec<Coords>> {
+        let starting_position = self.starting_position()?;
+        let mut loop_tiles = Vec::<Coords>::new();
+
+        if self.find_loop_right(&starting_position, &mut loop_tiles)
+            || self.find_loop_up(&starting_position, &mut loop_tiles)
+            || self.find_loop_left(&starting_position, &mut loop_tiles) {
+            Some(loop_tiles)
+        } else {
+            None
+        }
+    }
+
+    fn find_loop_right(&self, from: &Coords, loop_tiles: &mut Vec<Coords>) -> bool {
+        match &from.right() {
+            None => false,
+            Some(right) => match self.get_tile_at(right) {
+                Some(Tile::StartingPosition) => {
+                    loop_tiles.push(from.clone());
+                    true
+                }
+                Some(Tile::HorizontalPipe) => if self.find_loop_right(right, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::NorthWestBend) => if self.find_loop_up(right, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::SouthWestBend) => if self.find_loop_down(right, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                _ => false
+            }
+        }
+    }
+
+    fn find_loop_left(&self, from: &Coords, loop_tiles: &mut Vec<Coords>) -> bool {
+        match &from.left() {
+            None => false,
+            Some(left) => match self.get_tile_at(left) {
+                Some(Tile::StartingPosition) => {
+                    loop_tiles.push(from.clone());
+                    true
+                }
+                Some(Tile::HorizontalPipe) => if self.find_loop_left(left, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::NorthEastBend) => if self.find_loop_up(left, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::SouthEastBend) => if self.find_loop_down(left, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                _ => false
+            }
+        }
+    }
+
+    fn find_loop_up(&self, from: &Coords, loop_tiles: &mut Vec<Coords>) -> bool {
+        match &from.up() {
+            None => false,
+            Some(up) => match self.get_tile_at(up) {
+                Some(Tile::StartingPosition) => {
+                    loop_tiles.push(from.clone());
+                    true
+                }
+                Some(Tile::VerticalPipe) => if self.find_loop_up(up, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::SouthEastBend) => if self.find_loop_right(up, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::SouthWestBend) => if self.find_loop_left(up, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                _ => false
+            }
+        }
+    }
+
+    fn find_loop_down(&self, from: &Coords, loop_tiles: &mut Vec<Coords>) -> bool {
+        match &from.down() {
+            None => false,
+            Some(down) => match self.get_tile_at(down) {
+                Some(Tile::StartingPosition) => {
+                    loop_tiles.push(from.clone());
+                    true
+                }
+                Some(Tile::VerticalPipe) => if self.find_loop_down(down, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::NorthEastBend) => if self.find_loop_right(down, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                Some(Tile::NorthWestBend) => if self.find_loop_left(down, loop_tiles) {
+                    loop_tiles.push(from.clone());
+                    true
+                } else { false }
+                _ => false
+            }
         }
     }
 
@@ -168,7 +297,7 @@ impl Maze {
 }
 
 #[derive(Debug, PartialEq)]
-enum Tile {
+pub enum Tile {
     VerticalPipe,
     HorizontalPipe,
     NorthEastBend,
@@ -214,6 +343,17 @@ SJLL7
 |F--J
 LJ.LJ");
         assert_eq!(maze.loop_length(), Some(16));
+    }
 
+    #[test]
+    fn test_find_loop() {
+        let maze = Maze::new(".......
+7S-7--.
+.|.L7.-
+-L--J");
+        let tile_loop = maze.find_loop().unwrap();
+        for tile in tile_loop {
+            println!("{tile:?}");
+        }
     }
 }
